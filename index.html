@@ -1,0 +1,269 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<title>Transcriptome Evaluation</title>
+		<link rel="stylesheet" href="reveal.js/dist/reset.css">
+		<link rel="stylesheet" href="reveal.js/dist/reveal.css">
+		<link rel="stylesheet" href="reveal.js/dist/theme/night.css" id="theme">
+		<link rel="stylesheet" href="reveal.js/dist/user.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="reveal.js/plugin/highlight/monokai.css" id="highlight-theme">
+		<script type="text/javascript" src="https://code.highcharts.com/highcharts.js"></script>
+		<script src="https://code.highcharts.com/highcharts-more.js"></script>
+		<script src="https://code.highcharts.com/modules/sankey.js"></script>
+		<script src="https://code.highcharts.com/modules/heatmap.js"></script>
+		<script src="https://code.highcharts.com/modules/exporting.js"></script>
+		<script src="https://code.highcharts.com/gantt/modules/networkgraph.js"></script>
+		<script type="text/javascript" src="js/high-contrast-dark.js"></script>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.16.2/build/styles/monokai-sublime.min.css">
+		<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.16.2/build/highlight.min.js"></script>
+		<script type="text/javascript" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+		</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h2>Transcriptome Evaluation and Comparison</h2>
+					<p>Bastian Schiffthaler, Nicolas Delhomme</p>
+				</section>
+				<section>
+					<h4>Overview</h4>
+					<ul>
+						<li>What to assess</li>
+						<li>BUSCO</li>
+						<li>Detonate</li>
+						<li>TransRate</li>
+					</ul>
+				</section>
+				<section>
+					<section>
+					<h4>What can we assess</h4>
+					<ul>
+						<li class="fragment">Correctness - assembly errors</li>
+						<li class="fragment">Completeness - missing pieces?</li>
+					</ul>
+					</section>
+					<section>
+						<h4>What not to use</h4>
+						<ul>
+							<li class="fragment">Length based metrics: N50, mean length, ...</li>
+							<li class="fragment">Why?</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h4><a href="http://deweylab.biostat.wisc.edu/detonate/rsem-eval.html">Detonate</a></h4>
+						<ul>
+						<li class="fragment">Computes an assembly quality statistic from raw reads and assembled transcripts</li>
+						<li class="fragment">Can run in reference guided and reference free modes</li>
+						<li class="fragment">Computes Bayesian statistic based on the (mis)match of expected transcript coverage and observed transcript coverage</li>
+						<li class="fragment">Useful to compare between runs, less useful to get a general idea</li>
+						<li class="fragment warn">You MUST use the library used for the assembly</li>
+						</ul>
+					</section>
+					<section>
+						<p>Example command:</p>
+						<p>Step 1: Estimate priors</p>
+						<pre><code class="bash">#!/usr/bin/env/bash
+
+mkdir ~/evaluation
+
+rsem-eval-estimate-transcript-length-distribution \
+  ~/raw_data/trinity_illumina_only/Trinity.fasta ~/evaluation/detonate.params</code></pre>
+						</section>
+						<section>
+						<p>Step 2: calculate score</p>
+						<pre><code class="bash">#!/usr/bin/env/bash
+rsem-eval-calculate-score \
+  -p 2 \
+  --bowtie2 \
+  --transcript-length-parameters ~/evaluation/detonate.params \
+  --paired-end \
+  ~/raw_data/simulated/ze_1_1.fastq.gz \
+  ~/raw_data/simulated/ze_1_2.fastq.gz \
+  ~/raw_data/trinity_illumina_only/Trinity.fasta \
+  ~/evaluation/detonate \
+  250 |& tee ~/evaluation/detonate.log</code></pre>
+					</section>
+					<section>
+						<p>Detonate scores are always negative, but higher values (less negative) are better.</p>
+						<pre><code class="plaintext">Score	-11585832.86
+BIC_penalty	-3115.42
+Prior_score_on_contig_lengths_(f_function_canceled)	-2952.68
+Prior_score_on_contig_sequences	-489758.39
+Data_likelihood_in_log_space_without_correction	-11090459.05
+Correction_term_(f_function_canceled)	-452.68
+Number_of_contigs	488
+Expected_number_of_aligned_reads_given_the_data	333817.00
+Number_of_contigs_smaller_than_expected_read/fragment_length	31
+Number_of_contigs_with_no_read_aligned_to	5
+Maximum_data_likelihood_in_log_space	-11006679.43
+Number_of_alignable_reads	333817
+Number_of_alignments_in_total	373089</code></pre>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h4><a href="http://hibberdlab.com/transrate/">TransRate</a></h4>
+						<img data-src="http://hibberdlab.com/transrate/assets/themes/leap-day/images/mainlogo.png">
+						<ul>
+							<li class="fragment">Reference free QA of transcript assemblies</li>
+							<li class="fragment">Detects chimeras, structural errors, incomplete assembly parts and base errors.</li>
+							<li class="fragment">Useful to get a general idea</li>
+							<li class="fragment highlight">You MUST use the library used for the assembly</li>
+							<li class="fragment"> Scores greater than 0.22 are acceptable (better than 1/2 of all published transcriptomes at the time of publication).</li>
+						</ul>
+					</section>
+					<section data-background="white">
+						<img class="stretch" data-src="img/transrate.png"></img>
+					</section>
+					<section>
+						<p>Example command:</p>
+						<pre><code class="bash">#!/usr/bin/env bash
+gzip -d -c ~/raw_data/simulated/ze_1_1.fastq.gz > ~/evaluation/ze_1_1.fq
+gzip -d -c ~/raw_data/simulated/ze_1_2.fastq.gz > ~/evaluation/ze_1_2.fq
+
+transrate \
+  --assembly=~/raw_data/trinity_illumina_only/Trinity.fasta \
+  --left=~/evaluation/ze_1_1.fq \
+  --right=~/evaluation/ze_1_2.fq |& tee ~/evaluation/transrate.log</code></pre>
+					</section>
+					<section>
+						<p>Transrate output</p>
+						<pre style="font-size: 0.3em"><code class="plaintext">[ INFO] 2020-12-09 02:56:51 : Contig metrics:
+[ INFO] 2020-12-09 02:56:51 : -----------------------------------
+[ INFO] 2020-12-09 02:56:51 : n seqs                          488
+[ INFO] 2020-12-09 02:56:51 : smallest                        203
+[ INFO] 2020-12-09 02:56:51 : largest                        3393
+[ INFO] 2020-12-09 02:56:52 : n bases                      353286
+[ INFO] 2020-12-09 02:56:52 : mean len                     723.95
+[ INFO] 2020-12-09 02:56:52 : n under 200                       0
+[ INFO] 2020-12-09 02:56:52 : n over 1k                       101
+[ INFO] 2020-12-09 02:56:52 : n over 10k                        0
+[ INFO] 2020-12-09 02:56:52 : n with orf                      289
+[ INFO] 2020-12-09 02:56:52 : mean orf percent              98.16
+[ INFO] 2020-12-09 02:56:52 : n90                             357
+[ INFO] 2020-12-09 02:56:52 : n70                             587
+[ INFO] 2020-12-09 02:56:52 : n50                             894
+[ INFO] 2020-12-09 02:56:52 : n30                            1473
+[ INFO] 2020-12-09 02:56:52 : n10                            2380
+[ INFO] 2020-12-09 02:56:52 : gc                             0.45
+[ INFO] 2020-12-09 02:56:52 : bases n                           0
+[ INFO] 2020-12-09 02:56:52 : proportion n                    0.0
+[ INFO] 2020-12-09 02:56:52 : Contig metrics done in 0 seconds
+[ INFO] 2020-12-09 02:56:52 : Calculating read diagnostics...</code></pre>
+					</section>
+					<section>
+						<p>Transrate output</p>
+						<pre style="font-size: 0.3em"><code class="plaintext">[ INFO] 2020-12-09 02:57:17 : Read mapping metrics:
+[ INFO] 2020-12-09 02:57:17 : -----------------------------------
+[ INFO] 2020-12-09 02:57:17 : fragments                    341812
+[ INFO] 2020-12-09 02:57:17 : fragments mapped             335790
+[ INFO] 2020-12-09 02:57:17 : p fragments mapped             0.98
+[ INFO] 2020-12-09 02:57:17 : good mappings                333470
+[ INFO] 2020-12-09 02:57:17 : p good mapping                 0.98
+[ INFO] 2020-12-09 02:57:17 : bad mappings                   2320
+[ INFO] 2020-12-09 02:57:17 : potential bridges                 7
+[ INFO] 2020-12-09 02:57:17 : bases uncovered                5229
+[ INFO] 2020-12-09 02:57:17 : p bases uncovered              0.01
+[ INFO] 2020-12-09 02:57:17 : contigs uncovbase                31
+[ INFO] 2020-12-09 02:57:17 : p contigs uncovbase            0.06
+[ INFO] 2020-12-09 02:57:17 : contigs uncovered                 4
+[ INFO] 2020-12-09 02:57:17 : p contigs uncovered            0.01
+[ INFO] 2020-12-09 02:57:17 : contigs lowcovered                5
+[ INFO] 2020-12-09 02:57:17 : p contigs lowcovered           0.01
+[ INFO] 2020-12-09 02:57:17 : contigs segmented                 6
+[ INFO] 2020-12-09 02:57:17 : p contigs segmented            0.01</code></pre>
+					<pre style="font-size: 0.3em"><code class="plaintext">[ INFO] 2020-12-09 02:57:17 : TRANSRATE ASSEMBLY SCORE     0.7492
+[ INFO] 2020-12-09 02:57:17 : -----------------------------------
+[ INFO] 2020-12-09 02:57:17 : TRANSRATE OPTIMAL SCORE      0.7881
+[ INFO] 2020-12-09 02:57:17 : TRANSRATE OPTIMAL CUTOFF     0.4913
+[ INFO] 2020-12-09 02:57:17 : good contigs                    474
+[ INFO] 2020-12-09 02:57:17 : p good contigs                 0.97</code></pre>
+					</section>
+				</section>
+				<section>
+					<section data-background="white">
+						<h4><a href="https://busco.ezlab.org/">BUSCO</a> - Benchmarking Universal Single Copy Orthologs</h4>
+						<img width="25%" data-src="https://busco.ezlab.org/home/busco.png">
+						<ul>
+							<li class="fragment">Database of single copy orthologs for ancestral lines</li>
+							<li class="fragment">Expect to find many of these in the assembly</li>
+							<li class="fragment">Expect to not have duplicated matches... unless?</li>
+							<li class="fragment">Scores of >0.75 probably good</li>
+							<li class="fragment">Choice of database matters!</li>
+						</ul>
+					</section>
+					<section>
+						<p>Example command</p>
+						<pre><code class="bash">#!/usr/bin/env bash
+
+cd ~/evaluation
+
+busco \
+  -i ~/raw_data/trinity_illumina_only/Trinity.fasta \
+  -c 2 \
+  -o busco_trinity \
+  -m tran \
+  --long \
+  -l /db/busco/embryophyta_odb10 |& tee ~/evaluation/busco.log
+						</code></pre>
+					</section>
+					<section>
+						<h4>BUSCO output</h4>
+						<pre><code class="plaintext">        --------------------------------------------------
+	|Results from dataset embryophyta_odb10           |
+	--------------------------------------------------
+	|C:0.4%[S:0.3%,D:0.1%],F:0.4%,M:99.2%,n:1614      |
+	|6	Complete BUSCOs (C)                       |
+	|5	Complete and single-copy BUSCOs (S)       |
+	|1	Complete and duplicated BUSCOs (D)        |
+	|7	Fragmented BUSCOs (F)                     |
+	|1601	Missing BUSCOs (M)                        |
+	|1614	Total BUSCO groups searched               |
+	--------------------------------------------------</code></pre>
+					</section>
+				</section>
+			</div>
+		</div>
+		<script>hljs.initHighlightingOnLoad();</script>
+		
+		<script type="text/javascript">
+			$(document).ready(function(){
+				
+				Reveal.addEventListener( 'ready', function( event ) {
+					Reveal.addEventListener( 'slidechanged', function( event ) {
+						console.log(event);
+						if (event.indexh === 7 && event.indexv === 3){
+							window.dispatchEvent(new Event('resize'));
+						}
+					});
+				});
+			});
+		</script>
+		<script src="reveal.js/dist/reveal.js"></script>
+		<script src="reveal.js/plugin/notes/notes.js"></script>
+		<script src="reveal.js/plugin/markdown/markdown.js"></script>
+		<script src="reveal.js/plugin/highlight/highlight.js"></script>
+		<script src="reveal.js/plugin/math/math.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				width: 1280,
+				height: 720,
+
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath ]
+			});
+		</script>
+	</body>
+</html>
